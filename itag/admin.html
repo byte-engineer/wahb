@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ITAG Admin</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mu:#667085;--bd:#e3e6ea;--ac:#0f766e;--ac2:#fff;--dn:#b42318}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101418;--card:#1a2027;--tx:#eef1f4;--mu:#9aa4b2;--bd:#2c353f;--ac:#2dd4bf;--ac2:#06201d;--dn:#f97066}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif}
+.w{max-width:960px;margin:0 auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.logo{font-weight:800;font-size:22px;letter-spacing:1px;color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+h2{margin:0 0 4px;font-size:18px}
+p.m{color:var(--mu);margin:0 0 12px;font-size:14px}
+label{display:block;font-size:14px;margin:10px 0 4px}
+input{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+button{font:inherit;border:0;border-radius:10px;padding:11px 16px;cursor:pointer;background:var(--ac);color:var(--ac2);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+button.s{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+button.sm{padding:5px 10px;font-size:13px}
+button.b{width:100%;margin-top:14px}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row input{width:110px}
+.err{color:var(--dn);font-size:14px;margin-top:8px}
+.ok{color:var(--ac);font-size:14px;margin-top:8px}
+a{color:var(--ac)}
+.tbl{overflow-x:auto;max-height:420px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:start;padding:8px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{color:var(--mu);font-weight:600}
+td input{width:auto}
+.badge{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--bd);color:var(--mu)}
+.badge.on{color:var(--ac);border-color:var(--ac)}
+#sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+#sheet p{grid-column:1/-1}
+.lbl{background:#fff;color:#000;border:1px dashed #999;border-radius:10px;padding:10px;text-align:center;break-inside:avoid}
+.lbl .qr{display:flex;justify-content:center;margin:6px 0}
+.lbl .qr img,.lbl .qr canvas{width:120px;height:120px}
+.lbl b{display:block;font-size:13px;letter-spacing:.5px;font-family:ui-monospace,Consolas,monospace}
+.lbl small{display:block;font-size:11px;color:#333}
+@media print{
+ .noprint{display:none!important}
+ body{background:#fff}
+ .w{max-width:none;padding:0}
+ .card{border:0;padding:0;background:#fff}
+ #sheet{grid-template-columns:repeat(4,1fr);gap:8px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="w">
+ <div class="top noprint"><span class="logo">ITAG admin</span><button class="s sm" id="out" hidden>Log out</button></div>
+ <div id="app"></div>
+</div>
+<script>
+const C=window.ITAG_CONFIG||{};
+const sb=window.supabase&&C.SUPABASE_URL&&!/YOUR-/.test(C.SUPABASE_URL+C.SUPABASE_ANON_KEY)?supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY):null;
+const base=(C.SITE_URL||"").replace(/#.*$/,"");
+const siteOk=/^https?:\/\//.test(base)&&!/YOUR-/.test(base);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let tags=[],sel=new Set();
+
+function errText(e){return /not_admin/.test(e.message||"")?"This account is not in the admins table (see README, step 2).":(e.message||String(e))}
+
+async function init(){
+ if(!sb){$("app").innerHTML=`<div class="card"><h2>Setup needed</h2><p class="m">Fill in config.js with your Supabase URL and anon key (see README.md).</p></div>`;return}
+ const {data}=await sb.auth.getSession();
+ data.session?load():renderLogin();
+}
+function renderLogin(e){
+ $("out").hidden=true;
+ $("app").innerHTML=`<div class="card" style="max-width:420px;margin:0 auto"><h2>Admin login</h2>
+ <label for="em">Email</label><input id="em" type="email" autocomplete="username">
+ <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+ <button class="b" id="lb">Log in</button>${e?`<div class="err">${esc(e)}</div>`:""}</div>`;
+ $("lb").onclick=login;$("pw").onkeydown=ev=>{if(ev.key==="Enter")login()};
+}
+async function login(){
+ $("lb").disabled=true;
+ const {error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+ error?renderLogin(error.message):load();
+}
+$("out").onclick=async()=>{await sb.auth.signOut();tags=[];sel.clear();renderLogin()};
+
+async function load(note,bad){
+ const {data,error}=await sb.rpc("admin_list_tags");
+ if(error){tags=[];return renderPanel(errText(error),1)}
+ tags=data||[];renderPanel(note,bad);
+}
+async function create(){
+ const n=parseInt($("n").value,10);
+ if(!(n>=1&&n<=500))return renderPanel("Enter a number from 1 to 500.",1);
+ $("cb").disabled=true;
+ const {data,error}=await sb.rpc("admin_create_tags",{p_n:n});
+ if(error)return renderPanel(errText(error),1);
+ sel=new Set(data||[]);
+ load(`Created ${(data||[]).length} tags. They are selected in the print sheet below.`);
+}
+async function reset(code){
+ if(!confirm(`Reset ${code}?\n\nThe owner's information and password will be deleted and the tag can be registered again.`))return;
+ const {error}=await sb.rpc("admin_reset_tag",{p_code:code});
+ error?renderPanel(errText(error),1):load(`${code} was reset.`);
+}
+
+function renderPanel(note,bad){
+ $("out").hidden=false;
+ const reg=tags.filter(x=>x.registered_at).length;
+ $("app").innerHTML=`
+ ${siteOk?"":`<div class="card noprint err">SITE_URL in config.js is not set, so QR codes will not point to your site.</div>`}
+ <div class="card noprint"><h2>Create tags</h2><p class="m">Each new tag gets a random code. Print the QR sheet and stick the labels on items.</p>
+  <div class="row"><div><label for="n">How many</label><input id="n" type="number" min="1" max="500" value="12"></div><button id="cb">Create tags</button></div>
+  ${note?`<div class="${bad?"err":"ok"}">${esc(note)}</div>`:""}</div>
+ <div class="card noprint"><h2>Tags</h2><p class="m">${tags.length} total · ${reg} registered · ${tags.length-reg} not registered yet</p>
+  <div class="row" style="margin-bottom:8px"><button class="s sm" id="su">Select unregistered</button><button class="s sm" id="sn">Select none</button></div>
+  <div class="tbl"><table><thead><tr><th></th><th>Code</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>
+  ${tags.map(x=>`<tr><td><input type="checkbox" data-c="${esc(x.code)}" ${sel.has(x.code)?"checked":""} aria-label="Select ${esc(x.code)}"></td>
+   <td><a href="${esc(base+"#"+x.code)}" target="_blank" rel="noopener">${esc(x.code)}</a></td>
+   <td>${new Date(x.created_at).toLocaleDateString()}</td>
+   <td>${x.registered_at?'<span class="badge on">Registered</span>':'<span class="badge">Unregistered</span>'}</td>
+   <td>${x.registered_at?`<button class="s sm" data-r="${esc(x.code)}">Reset</button>`:""}</td></tr>`).join("")}
+  </tbody></table></div></div>
+ <div class="card"><div class="row noprint" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2>Print sheet</h2><button id="pr">Print <span id="cnt"></span> labels</button></div><div id="sheet"></div></div>`;
+ $("cb").onclick=create;
+ $("n").onkeydown=ev=>{if(ev.key==="Enter")create()};
+ $("su").onclick=()=>{sel=new Set(tags.filter(x=>!x.registered_at).map(x=>x.code));renderPanel()};
+ $("sn").onclick=()=>{sel.clear();renderPanel()};
+ $("pr").onclick=()=>window.print();
+ $("app").querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>{e.checked?sel.add(e.dataset.c):sel.delete(e.dataset.c);renderSheet()});
+ $("app").querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>reset(b.dataset.r));
+ renderSheet();
+}
+function renderSheet(){
+ const s=$("sheet"),codes=tags.map(x=>x.code).filter(c=>sel.has(c));
+ $("pr").disabled=!codes.length;$("cnt").textContent=codes.length;
+ s.innerHTML=codes.length?"":'<p class="m">Select tags above to print their QR labels.</p>';
+ codes.forEach(c=>{
+  const d=document.createElement("div");d.className="lbl";
+  d.innerHTML=`<small>If found, please scan · <span dir="rtl">إذا وجدته امسح الرمز</span></small><div class="qr"></div><b>${esc(c)}</b>`;
+  s.appendChild(d);
+  new QRCode(d.querySelector(".qr"),{text:base+"#"+c,width:240,height:240,correctLevel:QRCode.CorrectLevel.M});
+ });
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ITAG</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mu:#667085;--bd:#e3e6ea;--ac:#0f766e;--ac2:#fff;--dn:#b42318;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101418;--card:#1a2027;--tx:#eef1f4;--mu:#9aa4b2;--bd:#2c353f;--ac:#2dd4bf;--ac2:#06201d;--dn:#f97066}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif}
+.w{max-width:520px;margin:0 auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.logo{font-weight:800;font-size:22px;letter-spacing:1px;color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+h2{margin:0 0 4px;font-size:18px}h3{margin:0 0 10px;font-size:15px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+p.m{color:var(--mu);margin:0 0 12px;font-size:14px}
+label{display:block;font-size:14px;margin:10px 0 4px}
+input,textarea{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+.row{display:flex;align-items:center;gap:10px}
+.row>div{flex:1}
+.vis{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin:6px 0 0}
+.vis input{width:auto}
+button{font:inherit;border:0;border-radius:10px;padding:11px 16px;cursor:pointer;background:var(--ac);color:var(--ac2);font-weight:600}
+button.s{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+button.b{width:100%;margin-top:14px}
+.lang{padding:6px 12px;font-size:14px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.kv:last-child{border:0}.kv span:first-child{color:var(--mu)}.kv span:last-child{font-weight:600;text-align:end;overflow-wrap:anywhere}
+.em{border-color:var(--dn)}.em h3{color:var(--dn)}
+.err{color:var(--dn);font-size:14px;margin-top:8px}
+.ok{color:var(--ac);font-size:14px;margin-top:8px}
+a{color:var(--ac)}
+.tags button{margin:4px 4px 0 0}
+</style>
+</head>
+<body>
+<div class="w" id="app"></div>
+<script>
+const T={
+en:{lang:"العربية",tagline:"Scan. Identify. Help.",demo:"Demo: simulate scanning a tag",scan:"Scan",
+reg:"Register your ITAG",regSub:"First scan of tag",personal:"Personal information",emergency:"Emergency information",
+name:"Full name",phone:"Phone number",email:"Email address",ecName:"Emergency contact name",ecPhone:"Emergency contact phone",
+blood:"Blood type",medical:"Medical conditions / allergies",notes:"Other important notes",
+pin:"Choose a password (min 6 characters)",show:"Visible to anyone who scans",save:"Save and activate",
+req:"Name and password are required.",short:"Password is too short.",
+noPub:"The owner hasn’t shared any public information.",ownerLogin:"Owner login",
+login:"Log in",wrong:"Wrong tag or password.",dash:"My profile",privacyNote:"Tick “visible” only for details you want strangers to see. Everything else stays private.",
+update:"Save changes",saved:"Saved ✓",logout:"Log out",back:"Back",preview:"Public view",
+publicProfile:"ITAG profile",contact:"Contact",call:"Call",tag:"Tag code",unreg:"Tag not found.",
+reset:"Reset demo data",note:"Prototype: data is stored in this browser only. Production needs a server database (see notes)."},
+ar:{lang:"English",tagline:"امسح. تعرّف. ساعد.",demo:"تجربة: محاكاة مسح بطاقة",scan:"مسح",
+reg:"سجّل بطاقة ITAG",regSub:"أول مسح للبطاقة",personal:"المعلومات الشخصية",emergency:"معلومات الطوارئ",
+name:"الاسم الكامل",phone:"رقم الهاتف",email:"البريد الإلكتروني",ecName:"اسم جهة اتصال الطوارئ",ecPhone:"هاتف جهة اتصال الطوارئ",
+blood:"فصيلة الدم",medical:"الحالات الطبية / الحساسية",notes:"ملاحظات مهمة أخرى",
+pin:"اختر كلمة مرور (6 أحرف على الأقل)",show:"ظاهر لأي شخص يمسح البطاقة",save:"حفظ وتفعيل",
+req:"الاسم وكلمة المرور مطلوبان.",short:"كلمة المرور قصيرة جدًا.",
+noPub:"لم يشارك المالك أي معلومات عامة.",ownerLogin:"دخول المالك",
+login:"تسجيل الدخول",wrong:"رمز البطاقة أو كلمة المرور غير صحيحة.",dash:"ملفي الشخصي",privacyNote:"فعّل «ظاهر» فقط للتفاصيل التي تريد أن يراها الغرباء. كل ما عدا ذلك يبقى خاصًا.",
+update:"حفظ التغييرات",saved:"تم الحفظ ✓",logout:"تسجيل الخروج",back:"رجوع",preview:"العرض العام",
+publicProfile:"ملف ITAG",contact:"تواصل",call:"اتصال",tag:"رمز البطاقة",unreg:"البطاقة غير موجودة.",
+reset:"إعادة ضبط البيانات التجريبية",note:"نموذج أولي: تُحفظ البيانات في هذا المتصفح فقط. الإنتاج يحتاج قاعدة بيانات على خادم."}};
+const PERSONAL=["name","phone","email"],EMER=["ecName","ecPhone","blood","medical","notes"];
+const TAGS=["ITAG-1001","ITAG-1002","ITAG-1003"];
+let S={lang:"en",view:"home",tag:"",authed:false,msg:""};
+let DB={};
+try{DB=JSON.parse(localStorage.getItem("itag_db")||"{}");S.lang=localStorage.getItem("itag_lang")||"en"}catch(e){}
+const save=()=>{try{localStorage.setItem("itag_db",JSON.stringify(DB))}catch(e){}};
+const t=k=>T[S.lang][k]||k;
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function hash(p,salt){const b=new TextEncoder().encode(salt+":"+p);const h=await crypto.subtle.digest("SHA-256",b);return[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+function go(v,tag){S.view=v;if(tag!==undefined)S.tag=tag;S.msg="";render()}
+function scan(tag){tag=tag.trim().toUpperCase();if(!tag)return;S.authed=false;if(DB[tag])go("profile",tag);else go("register",tag)}
+function setLang(){S.lang=S.lang==="en"?"ar":"en";try{localStorage.setItem("itag_lang",S.lang)}catch(e){}render()}
+function field(k,v,vis,type,area){
+ const inp=area?`<textarea id="f_${k}" rows="2">${esc(v)}</textarea>`:`<input id="f_${k}" type="${type||"text"}" value="${esc(v)}" ${k==="phone"||k==="ecPhone"?'inputmode="tel" dir="ltr"':''}>`;
+ return `<label for="f_${k}">${t(k)}</label>${inp}<label class="vis"><input type="checkbox" id="v_${k}" ${vis?"checked":""}> ${t("show")}</label>`}
+function form(d){
+ const p=d||{f:{},v:{}};
+ const g=k=>p.f[k]||"",vv=k=>!!p.v[k];
+ return `<div class="card"><h3>${t("personal")}</h3>${field("name",g("name"),vv("name"))}${field("phone",g("phone"),vv("phone"))}${field("email",g("email"),vv("email"),"email")}</div>
+ <div class="card em"><h3>${t("emergency")}</h3>${field("ecName",g("ecName"),vv("ecName"))}${field("ecPhone",g("ecPhone"),vv("ecPhone"))}${field("blood",g("blood"),vv("blood"))}${field("medical",g("medical"),vv("medical"),"text",1)}${field("notes",g("notes"),vv("notes"),"text",1)}</div>`}
+function collect(){const f={},v={};[...PERSONAL,...EMER].forEach(k=>{f[k]=document.getElementById("f_"+k).value.trim();v[k]=document.getElementById("v_"+k).checked});return{f,v}}
+async function doRegister(){
+ const {f,v}=collect(),pw=document.getElementById("pw").value;
+ if(!f.name||!pw){S.msg=t("req");return render(true)}
+ if(pw.length<6){S.msg=t("short");return render(true)}
+ const salt=crypto.getRandomValues(new Uint32Array(2)).join("");
+ DB[S.tag]={f,v,salt,ph:await hash(pw,salt)};save();S.authed=true;go("dash")}
+async function doLogin(){
+ const tag=document.getElementById("lt").value.trim().toUpperCase(),pw=document.getElementById("lp").value,r=DB[tag];
+ if(!r||await hash(pw,r.salt)!==r.ph){S.msg=t("wrong");return render()}
+ S.tag=tag;S.authed=true;go("dash")}
+function doUpdate(){if(!S.authed)return;const {f,v}=collect();Object.assign(DB[S.tag],{f,v});save();S.msg="ok";render(true)}
+function rows(keys,d){return keys.filter(k=>d.v[k]&&d.f[k]).map(k=>`<div class="kv"><span>${t(k)}</span><span>${esc(d.f[k])}</span></div>`).join("")}
+function pub(d){
+ const a=rows(PERSONAL,d),b=rows(EMER,d);
+ let h=`<div class="card"><h2>${t("publicProfile")}</h2><p class="m">${t("tag")}: ${esc(S.tag)}</p>`;
+ if(!a&&!b)h+=`<p class="m">${t("noPub")}</p></div>`;
+ else{h+=(a?`<h3>${t("contact")}</h3>${a}`:"")+`</div>`;if(b)h+=`<div class="card em"><h3>${t("emergency")}</h3>${b}</div>`;
+  if(d.v.ecPhone&&d.f.ecPhone)h+=`<a href="tel:${esc(d.f.ecPhone.replace(/[^\d+]/g,""))}"><button class="b">${t("call")} ${esc(d.f.ecName&&d.v.ecName?d.f.ecName:"")}</button></a>`}
+ return h}
+function render(keep){
+ const ar=S.lang==="ar";document.documentElement.lang=S.lang;document.documentElement.dir=ar?"rtl":"ltr";
+ const app=document.getElementById("app");
+ let h=`<div class="top"><span class="logo">ITAG</span><button class="s lang" onclick="setLang()">${t("lang")}</button></div>`;
+ const m=S.msg==="ok"?`<div class="ok">${t("saved")}</div>`:S.msg?`<div class="err">${esc(S.msg)}</div>`:"";
+ if(S.view==="home"){
+  h+=`<div class="card"><h2>${t("tagline")}</h2><p class="m">${t("demo")}</p><div class="tags">${TAGS.map(x=>`<button class="s" onclick="scan('${x}')">${x}${DB[x]?" ✓":""}</button>`).join("")}</div>
+  <label for="st">${t("tag")}</label><div class="row"><div><input id="st" dir="ltr" placeholder="ITAG-1004"></div><button onclick="scan(document.getElementById('st').value)">${t("scan")}</button></div></div>
+  <div class="card"><h2>${t("ownerLogin")}</h2><label for="lt">${t("tag")}</label><input id="lt" dir="ltr"><label for="lp">${t("pin").split(" (")[0]}</label><input id="lp" type="password"><button class="b" onclick="doLogin()">${t("login")}</button>${m}</div>
+  <p class="m">${t("note")}</p><button class="s" onclick="if(confirm('?')){DB={};save();render()}">${t("reset")}</button>`;
+ }else if(S.view==="register"){
+  h+=`<div class="card"><h2>${t("reg")}</h2><p class="m">${t("regSub")}: <b dir="ltr">${esc(S.tag)}</b></p><p class="m">${t("privacyNote")}</p></div>${form()}
+  <div class="card"><label for="pw">${t("pin")}</label><input id="pw" type="password" autocomplete="new-password"><button class="b" onclick="doRegister()">${t("save")}</button>${m}</div>
+  <button class="s" onclick="go('home')">${t("back")}</button>`;
+ }else if(S.view==="profile"){
+  h+=pub(DB[S.tag])+`<button class="s" onclick="go('home')">${t("ownerLogin")}</button>`;
+ }else if(S.view==="dash"&&S.authed){
+  h+=`<div class="card"><h2>${t("dash")}</h2><p class="m">${t("tag")}: <b dir="ltr">${esc(S.tag)}</b></p><p class="m">${t("privacyNote")}</p></div>${form(DB[S.tag])}
+  <button class="b" onclick="doUpdate()">${t("update")}</button>${m}
+  <div class="card" style="margin-top:14px"><h3>${t("preview")}</h3>${pub(DB[S.tag])}</div>
+  <button class="s" onclick="S.authed=false;go('home')">${t("logout")}</button>`;
+ }else{h+=`<div class="card">${t("unreg")}</div><button class="s" onclick="go('home')">${t("back")}</button>`}
+ // keep typed values when only re-rendering errors
+ let snap={};if(keep===true)document.querySelectorAll("#app input,#app textarea").forEach(e=>{if(e.id)snap[e.id]=e.type==="checkbox"?e.checked:e.value});
+ app.innerHTML=h;
+ Object.keys(snap).forEach(id=>{const e=document.getElementById(id);if(e){if(e.type==="checkbox")e.checked=snap[id];else e.value=snap[id]}});
+}
+const hs=decodeURIComponent(location.hash.slice(1)).toUpperCase();
+if(/^ITAG-\d+$/.test(hs))scan(hs);else render();
+</script>
+</body>
+</html>
